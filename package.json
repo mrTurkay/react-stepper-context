@@ -1,0 +1,44 @@
+{
+  "name": "react-stepper-context",
+  "version": "1.0.0",
+  "description": "A React context for managing step-based workflows in React and React Native",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Murat Turkay",
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "stepper",
+    "context",
+    "react-native",
+    "react-stepper"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrTurkay/react-stepper-context"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@testing-library/react": "^16.0.1",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.1",
+    "rollup": "^4.27.4",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.7.2"
+  }
+}
