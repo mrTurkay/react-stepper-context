@@ -1,14 +1,21 @@
-import resolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import typescript from "rollup-plugin-typescript2";
-import pkg from "./package.json";
+const resolve = require('@rollup/plugin-node-resolve');
+const commonjs = require('@rollup/plugin-commonjs');
+const typescript = require('rollup-plugin-typescript2');
+const pkg = require('./package.json');
 
-export default {
-  input: "src/index.ts",
+module.exports = {
+  input: 'src/index.ts',
   output: [
-    { file: pkg.main, format: "cjs", sourcemap: true },
-    { file: pkg.module, format: "esm", sourcemap: true },
+    { file: pkg.main, format: 'cjs', sourcemap: true },
+    { file: pkg.module, format: 'esm', sourcemap: true },
   ],
-  external: ["react", "react-dom"],
-  plugins: [resolve(), commonjs(), typescript()],
+  external: ['react', 'react-dom'],
+  plugins: [
+    resolve(),
+    commonjs(),
+    typescript({
+      tsconfig: './tsconfig.json', // Ensure it points to your tsconfig.json
+      useTsconfigDeclarationDir: true, // Use the declarationDir from tsconfig
+    }),
+  ],
 };
