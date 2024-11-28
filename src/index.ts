@@ -1,1 +1,1 @@
-export * from './StepperProvider';
+export * from './ReactStepperContext';
