@@ -20,7 +20,7 @@ export type Step = {
 };
 
 export type ReactStepperContextProps = {
-  children: (currentStepComponent: JSX.Element, stepperComponent?: JSX.Element) => JSX.Element;
+  children: (currentStepComponent: JSX.Element) => JSX.Element;
   steps: (Omit<Step, 'status'> & { status?: StepStatus })[];
   initialStepIndex?: number;
   initialStepValues?: { [key: string | number]: any };
@@ -140,14 +140,14 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   };
 
   const setNextStepStatusInProgressIfItIsIdle = () => {
-  if (!isThisLastStep && stepsState[currentStepIndex + 1].status === StepStatus.IDLE) {
-    setStepsState((prevSteps) =>
-      prevSteps.map((step, index) =>
-        index === currentStepIndex + 1 ? { ...step, status: StepStatus.IN_PROGRESS } : step
-      )
-    );
-  }
-};
+    if (!isThisLastStep && stepsState[currentStepIndex + 1].status === StepStatus.IDLE) {
+      setStepsState((prevSteps) =>
+        prevSteps.map((step, index) =>
+          index === currentStepIndex + 1 ? { ...step, status: StepStatus.IN_PROGRESS } : step
+        )
+      );
+    }
+  };
 
   return (
     <StepperContext.Provider
