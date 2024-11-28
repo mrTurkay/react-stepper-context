@@ -1,29 +1,33 @@
-import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-// Create the context with an empty default value
 const StepperContext = createContext<ReactStepperContextValueType | null>(null);
 
-export type StepStatus = 'IDLE' | 'IN_PROGRESS' | 'SUCCESS' | 'ERROR' | 'WARNING';
+export enum StepStatus {
+  IDLE = 'IDLE',
+  IN_PROGRESS = 'IN_PROGRESS',
+  SUCCESS = 'SUCCESS',
+  ERROR = 'ERROR',
+  WARNING = 'WARNING',
+}
 
 export type Step = {
   key: string;
   title: string;
   component: JSX.Element;
-  metadata?: Record<string, any>; // Custom metadata for each step
-  status: StepStatus; // Predefined status
-  locked?: boolean; // Prevents the user from navigating to this step
+  metadata?: Record<string, any>;
+  status: StepStatus;
+  locked?: boolean;
 };
 
-// Define the provider's props
 export type ReactStepperContextProps = {
   children: (currentStepComponent: JSX.Element, stepperComponent?: JSX.Element) => JSX.Element;
-  stepperComponent?: JSX.Element;
   steps: (Omit<Step, 'status'> & { status?: StepStatus })[];
   initialStepIndex?: number;
   initialStepValues?: { [key: string | number]: any };
 };
 
 export type ReactStepperContextValueType = {
+  steps: Step[];
   currentStepIndex: number;
   currentStepKey: string;
   totalSteps: number;
@@ -41,13 +45,12 @@ export type ReactStepperContextValueType = {
   isStepLocked: (key: string) => boolean;
   isNextStepLocked: () => boolean;
   isPreviousStepLocked: () => boolean;
+  setCurrentStepStatus: (status: StepStatus) => void;
 };
 
-// Create the provider component
 export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   children,
   steps,
-  stepperComponent,
   initialStepIndex = 0,
   initialStepValues = {},
 }) => {
@@ -56,13 +59,15 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   const [stepsState, setStepsState] = useState<Step[]>(
     steps.map((step) => ({
       ...step,
-      status: step.status || 'IDLE',
+      status: step.status || StepStatus.IDLE,
       locked: step.locked || false,
     }))
   );
 
   const currentStep = useMemo(() => stepsState[currentStepIndex], [stepsState, currentStepIndex]);
-  const currentStepKey = currentStep.key;
+  const currentStepKey = useMemo(() => currentStep.key, [currentStep]);
+  const isThisLastStep = useMemo(() => currentStepIndex === stepsState.length - 1, [currentStepIndex, stepsState]);
+  const isThisFirstStep = useMemo(() => currentStepIndex === 0, [currentStepIndex]);
 
   const setCurrentStepValues = (values: { [key: string | number]: any }) => {
     setAllStepsValues((prevValues) => ({
@@ -74,49 +79,52 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   const getCurrentStepValues = () => allStepsValues[currentStepKey] || {};
 
   const lockStep = (key: string) => {
-    setStepsState((prevSteps) => prevSteps.map((step) => (step.key === key ? { ...step, locked: true } : step)));
+    setStepsState((prevSteps) =>
+      prevSteps.map((step) => (step.key === key && !step.locked ? { ...step, locked: true } : step))
+    );
   };
 
   const unlockStep = (key: string) => {
-    setStepsState((prevSteps) => prevSteps.map((step) => (step.key === key ? { ...step, locked: false } : step)));
+    setStepsState((prevSteps) =>
+      prevSteps.map((step) => (step.key === key && step.locked ? { ...step, locked: false } : step))
+    );
   };
 
   const unlockNextStep = () => {
-    if (currentStepIndex < stepsState.length - 1) {
+    if (!isThisLastStep && stepsState[currentStepIndex + 1].locked) {
       setStepsState((prevSteps) =>
         prevSteps.map((step, index) => (index === currentStepIndex + 1 ? { ...step, locked: false } : step))
       );
     }
   };
-
-  const isNextStepLocked = useMemo(
-    () => currentStepIndex < stepsState.length - 1 && stepsState[currentStepIndex + 1].locked,
+  const isNextStepLocked = useCallback(
+    () => !isThisLastStep && !!stepsState[currentStepIndex + 1].locked,
     [currentStepIndex, stepsState]
   );
-  const isPreviousStepLocked = useMemo(
-    () => currentStepIndex > 0 && stepsState[currentStepIndex - 1].locked,
+  const isPreviousStepLocked = useCallback(
+    () => !isThisFirstStep && !!stepsState[currentStepIndex - 1].locked,
     [currentStepIndex, stepsState]
   );
   const isStepLocked = useMemo(() => (key: string) => !!stepsState.find((s) => s.key === key)?.locked, [stepsState]);
-  
+
   const goToNextStep = () => {
     let nextIndex = currentStepIndex + 1;
     while (nextIndex < stepsState.length && stepsState[nextIndex].locked) {
       nextIndex++;
     }
-    if (nextIndex < stepsState.length) {
-      setCurrentStepIndex(nextIndex);
-    }
+    if (nextIndex === currentStepIndex || nextIndex >= stepsState.length) return; // No movement
+    setCurrentStepIndex(nextIndex);
+
+    setNextStepStatusInProgressIfItIsIdle();
   };
 
   const goToPreviousStep = () => {
     let prevIndex = currentStepIndex - 1;
-    while (prevIndex >= 0 && stepsState[prevIndex].locked) {
+    while (!isThisFirstStep && stepsState[prevIndex].locked) {
       prevIndex--;
     }
-    if (prevIndex >= 0) {
-      setCurrentStepIndex(prevIndex);
-    }
+    if (prevIndex === currentStepIndex || prevIndex < 0) return; // No movement
+    setCurrentStepIndex(prevIndex);
   };
 
   const goToStep = (index: number) => {
@@ -125,14 +133,31 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
     }
   };
 
+  const setCurrentStepStatus = (status: StepStatus) => {
+    setStepsState((prevSteps) =>
+      prevSteps.map((step, index) => (index === currentStepIndex ? { ...step, status } : step))
+    );
+  };
+
+  const setNextStepStatusInProgressIfItIsIdle = () => {
+  if (!isThisLastStep && stepsState[currentStepIndex + 1].status === StepStatus.IDLE) {
+    setStepsState((prevSteps) =>
+      prevSteps.map((step, index) =>
+        index === currentStepIndex + 1 ? { ...step, status: StepStatus.IN_PROGRESS } : step
+      )
+    );
+  }
+};
+
   return (
     <StepperContext.Provider
       value={{
+        steps: stepsState,
         currentStepIndex,
         currentStepKey,
         totalSteps: steps.length,
-        isThisLastStep: currentStepIndex === steps.length - 1,
-        isThisFirstStep: currentStepIndex === 0,
+        isThisLastStep,
+        isThisFirstStep,
         goToNextStep,
         goToPreviousStep,
         goToStep,
@@ -145,9 +170,10 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
         isStepLocked,
         isNextStepLocked,
         isPreviousStepLocked,
+        setCurrentStepStatus,
       }}
     >
-      {children(currentStep.component, stepperComponent)}
+      {children(currentStep.component)}
     </StepperContext.Provider>
   );
 };
