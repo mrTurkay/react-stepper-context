@@ -1,176 +1,112 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useReducer } from 'react';
+import { reducer, initialState } from './reducer';
+import { ReactStepperContextProps, ReactStepperContextValueType, StepStatus, Step } from './types';
 
 const StepperContext = createContext<ReactStepperContextValueType | null>(null);
 
-export enum StepStatus {
-  IDLE = 'IDLE',
-  IN_PROGRESS = 'IN_PROGRESS',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR',
-  WARNING = 'WARNING',
-}
-
-export type Step = {
-  key: string;
-  title: string;
-  component: JSX.Element;
-  metadata?: Record<string, any>;
-  status: StepStatus;
-  locked?: boolean;
-};
-
-export type ReactStepperContextProps = {
-  children: (currentStepComponent: JSX.Element) => JSX.Element;
-  steps: (Omit<Step, 'status'> & { status?: StepStatus })[];
-  initialStepIndex?: number;
-  initialStepValues?: { [key: string | number]: any };
-};
-
-export type ReactStepperContextValueType = {
-  steps: Step[];
-  currentStepIndex: number;
-  setCurrentStepIndex: (index: number) => void;
-
-  currentStepKey: string;
-  totalSteps: number;
-  isThisLastStep: boolean;
-  isThisFirstStep: boolean;
-  allStepsValues: { [key: string | number]: any };
-  goToNextStep: () => void;
-  goToPreviousStep: () => void;
-  goToStep: (index: number) => void;
-  setCurrentStepValues: (values: { [key: string | number]: any }) => void;
-  getCurrentStepValues: () => { [key: string | number]: any };
-  lockStep: (key: string) => void;
-  unlockStep: (key: string) => void;
-  unlockNextStep: () => void;
-  isStepLocked: (key: string) => boolean;
-  isNextStepLocked: () => boolean;
-  isPreviousStepLocked: () => boolean;
-  setCurrentStepStatus: (status: StepStatus) => void;
-  stepsState: Step[];
-  setStepsState: (steps: Step[]) => void;
-  areAllStepsSuccessStatus: boolean;
-};
-
 export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   children,
-  steps,
+  steps: stepsProp,
   initialStepIndex = 0,
   initialStepValues = {},
 }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(initialStepIndex);
-  const [allStepsValues, setAllStepsValues] = useState(initialStepValues);
-  const [stepsState, setStepsState] = useState<Step[]>(
-    steps.map((step) => ({
+  const [state, dispatch] = useReducer(reducer, {
+    ...initialState,
+    currentStepIndex: initialStepIndex,
+    allStepsValues: initialStepValues,
+    steps: stepsProp.map((step) => ({
       ...step,
       status: step.status || StepStatus.IDLE,
       locked: step.locked || false,
-    }))
-  );
+    })),
+  });
 
-  const currentStep = useMemo(() => stepsState[currentStepIndex], [stepsState, currentStepIndex]);
+  const currentStep = useMemo(() => state.steps[state.currentStepIndex], [state.steps, state.currentStepIndex]);
   const currentStepKey = useMemo(() => currentStep.key, [currentStep]);
 
-  const isThisLastStep = useMemo(() => currentStepIndex === stepsState.length - 1, [currentStepIndex, stepsState]);
-  const isThisFirstStep = useMemo(() => currentStepIndex === 0, [currentStepIndex]);
+  const isThisLastStep = useMemo(
+    () => state.currentStepIndex === state.steps.length - 1,
+    [state.currentStepIndex, state.steps]
+  );
+  const isThisFirstStep = useMemo(() => state.currentStepIndex === 0, [state.currentStepIndex]);
 
   const setCurrentStepValues = (values: { [key: string | number]: any }) => {
-    setAllStepsValues((prevValues) => ({
-      ...prevValues,
-      [currentStepKey]: values,
-    }));
+    dispatch({ type: 'SET_CURRENT_STEP_VALUES', payload: values });
   };
 
-  const getCurrentStepValues = () => allStepsValues[currentStepKey] || {};
+  const getCurrentStepValues = () => state.allStepsValues[currentStepKey] || {};
 
   const lockStep = (key: string) => {
-    setStepsState((prevSteps) =>
-      prevSteps.map((step) => (step.key === key && !step.locked ? { ...step, locked: true } : step))
-    );
+    dispatch({ type: 'LOCK_STEP', payload: key });
   };
 
   const unlockStep = (key: string) => {
-    setStepsState((prevSteps) =>
-      prevSteps.map((step) => (step.key === key && step.locked ? { ...step, locked: false } : step))
-    );
+    dispatch({ type: 'UNLOCK_STEP', payload: key });
   };
 
   const unlockNextStep = () => {
-    if (!isThisLastStep && stepsState[currentStepIndex + 1].locked) {
-      setStepsState((prevSteps) =>
-        prevSteps.map((step, index) => (index === currentStepIndex + 1 ? { ...step, locked: false } : step))
-      );
+    if (!isThisLastStep && state.steps[state.currentStepIndex + 1].locked) {
+      dispatch({ type: 'UNLOCK_STEP', payload: state.steps[state.currentStepIndex + 1].key });
     }
   };
+
   const isNextStepLocked = useCallback(
-    () => !isThisLastStep && !!stepsState[currentStepIndex + 1].locked,
-    [currentStepIndex, stepsState]
+    () => !isThisLastStep && !!state.steps[state.currentStepIndex + 1].locked,
+    [state.currentStepIndex, state.steps]
   );
+
   const isPreviousStepLocked = useCallback(
-    () => !isThisFirstStep && !!stepsState[currentStepIndex - 1].locked,
-    [currentStepIndex, stepsState]
+    () => !isThisFirstStep && !!state.steps[state.currentStepIndex - 1].locked,
+    [state.currentStepIndex, state.steps]
   );
-  const isStepLocked = useMemo(() => (key: string) => !!stepsState.find((s) => s.key === key)?.locked, [stepsState]);
 
-  const goToNextStep = () => {
-    let nextIndex = currentStepIndex + 1;
-    while (nextIndex < stepsState.length && stepsState[nextIndex].locked) {
-      nextIndex++;
+  const isStepLocked = useMemo(() => (key: string) => !!state.steps.find((s) => s.key === key)?.locked, [state.steps]);
+
+  const goToNextStep = (
+    currentStepStatus: StepStatus = StepStatus.SUCCESS,
+    nextStepStatus: StepStatus = StepStatus.IN_PROGRESS,
+    unlockNextStep: boolean = true
+  ) => {
+    const nextIndex = state.currentStepIndex + 1;
+    if (!isThisLastStep && (unlockNextStep || !state.steps[nextIndex].locked)) {
+      dispatch({
+        type: 'GO_TO_NEXT_STEP',
+        payload: { nextIndex, nextStepStatus, currentStepStatus, unlockNextStep },
+      });
     }
-    if (nextIndex === currentStepIndex || nextIndex >= stepsState.length) return; // No movement
-    setCurrentStepIndex(nextIndex);
-
-    setNextStepStatusInProgressIfItIsIdle();
   };
 
-  const goToPreviousStep = () => {
-    let prevIndex = currentStepIndex - 1;
-    while (!isThisFirstStep && stepsState[prevIndex].locked) {
-      prevIndex--;
-    }
-    if (prevIndex === currentStepIndex || prevIndex < 0) return; // No movement
-    setCurrentStepIndex(prevIndex);
-  };
+  const goToPreviousStep = () => goToStep(state.currentStepIndex - 1);
 
   const goToStep = (index: number) => {
-    if (index >= 0 && index < stepsState.length && !stepsState[index].locked) {
-      setCurrentStepIndex(index);
+    if (index >= 0 && index < state.steps.length && !state.steps[index].locked) {
+      dispatch({ type: 'GO_TO_STEP', payload: index });
     }
   };
 
   const setCurrentStepStatus = (status: StepStatus) => {
-    setStepsState((prevSteps) =>
-      prevSteps.map((step, index) => (index === currentStepIndex ? { ...step, status } : step))
-    );
+    dispatch({ type: 'SET_CURRENT_STEP_STATUS', payload: status });
   };
 
-  const setNextStepStatusInProgressIfItIsIdle = () => {
-    if (!isThisLastStep && stepsState[currentStepIndex + 1].status === StepStatus.IDLE) {
-      setStepsState((prevSteps) =>
-        prevSteps.map((step, index) =>
-          index === currentStepIndex + 1 ? { ...step, status: StepStatus.IN_PROGRESS } : step
-        )
-      );
-    }
-  };
+  const areAllStepsSuccessStatus = state.steps.every((step) => step.status === StepStatus.SUCCESS);
 
-  const areAllStepsSuccessStatus = stepsState.every((step) => step.status === StepStatus.SUCCESS);
+  const isCurrentStepAlreadySubmitted =
+    currentStep.status === StepStatus.SUCCESS || currentStep.status === StepStatus.ERROR;
 
   return (
     <StepperContext.Provider
       value={{
-        steps: stepsState,
-        currentStepIndex,
-        setCurrentStepIndex,
+        steps: state.steps,
+        totalStepsCount: state.steps.length,
+        currentStepIndex: state.currentStepIndex,
+        setCurrentStepIndex: (index: number) => dispatch({ type: 'GO_TO_STEP', payload: index }),
         currentStepKey,
-        totalSteps: steps.length,
         isThisLastStep,
         isThisFirstStep,
         goToNextStep,
         goToPreviousStep,
         goToStep,
-        allStepsValues,
+        allStepsValues: state.allStepsValues,
         setCurrentStepValues,
         getCurrentStepValues,
         lockStep,
@@ -180,9 +116,9 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
         isNextStepLocked,
         isPreviousStepLocked,
         setCurrentStepStatus,
-        stepsState,
-        setStepsState,
+        stepsState: state.steps,
         areAllStepsSuccessStatus,
+        isCurrentStepAlreadySubmitted,
       }}
     >
       {children(currentStep.component)}
