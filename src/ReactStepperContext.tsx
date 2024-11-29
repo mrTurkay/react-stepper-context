@@ -29,6 +29,8 @@ export type ReactStepperContextProps = {
 export type ReactStepperContextValueType = {
   steps: Step[];
   currentStepIndex: number;
+  setCurrentStepIndex: (index: number) => void;
+
   currentStepKey: string;
   totalSteps: number;
   isThisLastStep: boolean;
@@ -46,6 +48,9 @@ export type ReactStepperContextValueType = {
   isNextStepLocked: () => boolean;
   isPreviousStepLocked: () => boolean;
   setCurrentStepStatus: (status: StepStatus) => void;
+  stepsState: Step[];
+  setStepsState: (steps: Step[]) => void;
+  areAllStepsSuccessStatus: boolean;
 };
 
 export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
@@ -66,6 +71,7 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
 
   const currentStep = useMemo(() => stepsState[currentStepIndex], [stepsState, currentStepIndex]);
   const currentStepKey = useMemo(() => currentStep.key, [currentStep]);
+
   const isThisLastStep = useMemo(() => currentStepIndex === stepsState.length - 1, [currentStepIndex, stepsState]);
   const isThisFirstStep = useMemo(() => currentStepIndex === 0, [currentStepIndex]);
 
@@ -149,11 +155,14 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
     }
   };
 
+  const areAllStepsSuccessStatus = stepsState.every((step) => step.status === StepStatus.SUCCESS);
+
   return (
     <StepperContext.Provider
       value={{
         steps: stepsState,
         currentStepIndex,
+        setCurrentStepIndex,
         currentStepKey,
         totalSteps: steps.length,
         isThisLastStep,
@@ -171,6 +180,9 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
         isNextStepLocked,
         isPreviousStepLocked,
         setCurrentStepStatus,
+        stepsState,
+        setStepsState,
+        areAllStepsSuccessStatus,
       }}
     >
       {children(currentStep.component)}
