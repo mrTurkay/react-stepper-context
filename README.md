@@ -37,8 +37,6 @@ yarn add react-stepper-context
 ---
 
 <br>
-<br>
-<br>
 
 # 🛠 Usage
 
@@ -69,8 +67,6 @@ function App() {
   return (
     <ReactStepperContext steps={steps}>
       {(currentStepComponent) => (
-        // Just create your layout here and use. 
-        // currentStepComponent is a JSX.Element that you can easily place in your layout.
         <div className="wrapper">
           <Sidebar />
           {currentStepComponent}
@@ -216,9 +212,6 @@ import { useReactStepperContext } from 'react-stepper-context';
 const { steps, currentStepIndex, goToNextStep, lockStep } = useReactStepperContext();
 ```
 --- 
-<br>
-<br>
-<br>
 <br>
 
 

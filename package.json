@@ -1,7 +1,7 @@
 {
   "name": "react-stepper-context",
   "version": "1.0.0",
-  "description": "A React context for managing step-based workflows in React and React Native",
+  "description": "A flexible context for managing multi-step flows in React and React Native",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
