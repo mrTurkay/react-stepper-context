@@ -126,10 +126,10 @@ export const ReactStepperContext: React.FC<ReactStepperContextProps> = ({
   );
 };
 
-export const useReactStepper = () => {
+export const useReactStepperContext = () => {
   const context = useContext(StepperContext);
   if (!context) {
-    throw new Error('useReactStepper must be used within a StepperProvider');
+    throw new Error('useReactStepperContext must be used within a StepperProvider');
   }
   return context;
 };
