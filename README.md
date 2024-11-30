@@ -40,6 +40,8 @@ yarn add react-stepper-context
 
 # 🛠 Usage
 
+> For an example usage project, see [react-stepper-context-test](https://github.com/mrTurkay/react-stepper-context-test).
+
 React Stepper Context allows you to define steps, manage navigation, and handle state within a multi-step flow.
 Here’s a simple example:
 
