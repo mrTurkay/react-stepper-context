@@ -11,7 +11,7 @@ export type Step = {
   title: string;
   component: JSX.Element;
   metadata?: Record<string, any>;
-  status: StepStatus;
+  status?: StepStatus;
   locked?: boolean;
 };
 
